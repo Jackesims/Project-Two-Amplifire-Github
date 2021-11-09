@@ -1,0 +1,6 @@
+1. Average age of death from lightning
+2. Manner of death % for each year
+3. Marriage life expectancy throughout the years
+4. How many people died at work while doing non-work activitie
+5. accumulative % of autopsied vs. non-autopsied
+6. How many people died in the month of May while engaged in sports activities
