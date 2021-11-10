@@ -17,6 +17,8 @@ Proposal:
 8. What are the main causes of death while resting, sitting, or eating?
 9. What's the impact of education on the life expectancy of an individual?
 10. Deadliest day of the week and deadliest month of the year?
+10a. Deadliest day of the year?
+11. what are the main causes of death for infants? (top 5-10ish)
 
 
 
