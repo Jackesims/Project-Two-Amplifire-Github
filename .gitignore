@@ -1,0 +1,21 @@
+/.bsp/
+*.class
+*.log
+
+#metals and vscode
+.metals/
+.bloop/
+.bsp/
+.ammonite/
+metals.sbt
+.vscode/
+
+#sbt
+project/project/
+project/target/
+target/
+
+# other? - from alvinalexander.com
+.history
+.scala_dependencies
+.cache-main
