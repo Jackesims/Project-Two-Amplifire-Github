@@ -1,45 +1,34 @@
-# PROJECT NAME
+### Project 2
+Proposal:
+- Create a Spark Application that processes data from Kagle at this link:
+- https://www.kaggle.com/cdc/mortality
 
-## Project Description
+### Presentations
+- We will be analizing the following questions:
+1. Average age of death from lightning
+2. Manner of death % for each year
+3. Marriage life expectancy throughout the years
+4. How many people died at work while doing non-work activities
+5. Deaths on the job compared to education level
+6. Deaths on the job compared to age
+7. accumulative % of autopsied vs. non-autopsied
+8. How many people died in the month of May while engaged in sports activities
+9. What are the main ways people die while doing vital activities?
+10. What are the main causes of death while resting, sitting, or eating?
+11. What's the impact of education on the life expectancy of an individual?
+12. Deadliest day of the week and deadliest month of the year?
+13. Deadliest day of the year?
+14. what are the main causes of death for infants? (top 5-10ish)
 
-Here goes your awesome project description!
 
-## Technologies Used
 
-* Tech 1 - version 1.0
-* Tech 2 - version 2.0
-* Tech 3 - version 3.0
+### Technologies
+- Apache Spark
+- Spark SQL
+- YARN
+- HDFS and/or S3
+- Scala
+- Git + GitHub
 
-## Features
-
-List of features ready and TODOs for future development
-* Awesome feature 1
-* Awesome feature 2
-* Awesome feature 3
-
-To-do list:
-* Wow improvement to be done 1
-* Wow improvement to be done 2
-
-## Getting Started
-   
-(include git clone command)
-(include all environment setup steps)
-
-> Be sure to include BOTH Windows and Unix command  
-> Be sure to mention if the commands only work on a specific platform (eg. AWS, GCP)
-
-- All the `code` required to get started
-- Images of what it should look like
-
-## Usage
-
-> Here, you instruct other people on how to use your project after they’ve installed it. This would also be a good place to include screenshots of your project in action.
-
-## Contributors
-
-> Here list the people who have contributed to this project. (ignore this section, if its a solo project)
-
-## License
-
-This project uses the following license: [<license_name>](<link>).
+### Due Date
+- Presentations will take place on Friday, 19-Nov-2021.
