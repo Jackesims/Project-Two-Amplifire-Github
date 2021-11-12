@@ -32,3 +32,10 @@ Proposal:
 
 ### Due Date
 - Presentations will take place on Friday, 19-Nov-2021.
+
+
+### Instructions for Using the Tool
+
+As previously stated, data is collected in the form of CSV files from https://www.kaggle.com/cdc/mortality.
+
+Download the individual CSV files by year, and upload each CSV file to /home/maria_dev. Then, add the file name to a separate CSV file called "csvFileList.csv", and add a return ("\n") at the end. This serves as the delimiter. Upload this specific file to /home/maria_dev.
