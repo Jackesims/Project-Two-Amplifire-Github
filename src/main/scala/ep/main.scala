@@ -19,6 +19,8 @@ object Main extends App{
     println("\nReading the data Set...\n")
     val parqDF1 = spark.read.parquet("/user/maria_dev/merged_data.parquet")
     println("Done...\n")
+
+    // Marital Query
     println("Doing the marital query...")
     parqDF1
       .filter("detail_age > 18")
@@ -27,7 +29,10 @@ object Main extends App{
         avg("detail_age").as("Avg Age"), 
         count("*").alias("Total Number") )
       .orderBy("sex","marital_status")
-      .show();
+      .coalesce(1)
+      .write.csv("/user/maria_dev/output1.csv");
+    
+    // Education Query
     println("Doing Education Query...")
     parqDF1
       .filter("detail_age > 18")
@@ -36,7 +41,8 @@ object Main extends App{
         avg("detail_age").as("Avg Age"), 
         count("*").alias("Total Number") )
       .orderBy("sex","education_2003_revision")
-      .show(40);
+      .coalesce(1)
+      .write.csv("/user/maria_dev/output2.csv");
   
   println("DONE....\n")
 
