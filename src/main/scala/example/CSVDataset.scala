@@ -60,11 +60,13 @@ object CSVDataset {
 
     // Put any global variables here.
 
+    /*
     def main(args: Array[String]): Unit =  {
         var CSVInstance = new CSVDataset("merged_data.csv")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
     }
+    */
 
     // Global functions go here.
 

@@ -6,7 +6,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 import scala.collection.JavaConversions._
 
-object Main extends App {
+object Main {
     // Program reads from hdfs, creates a df from it, and prints out top 10 rows in column style then prints top10 rows who are women
     val spark = SparkSession
       .builder()

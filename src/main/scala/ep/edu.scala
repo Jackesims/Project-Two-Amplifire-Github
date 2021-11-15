@@ -24,14 +24,7 @@ object edu{
     var avgAgeArray = Array.ofDim[Double](titleList.length,2);
 
     var count = 0;
-    
-    var res1 = df1.filter("detail_age > 18").count(); // Total number of individuals
 
-    // Widowed + Married will be counted the same for "married vs single"
-    // On the same note, divorced individuals will be counted as single for the broad analysis
-    
-
-    println("Total Number of Individuals Above the Age of 18: " + res1);
     for(edu <- eduList) {
         var res = parqDF2.filter("education_2003_revision = " + edu).filter("detail_age > 18").agg(avg("detail_age").as("Avg Age " + titleList(count))).collect();
             
