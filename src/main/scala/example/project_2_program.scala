@@ -6,6 +6,7 @@ import scala.util.Try
 
 import org.apache.spark.sql.SparkSession
 import java.nio.file.{Paths, Files}
+import org.apache.spark.sql.types._
 import scala.sys.process._
 
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +52,7 @@ class CSVDataset(var filename: String) {
             println("File in question already exists on HDFS. Moving on to next file.")
             } 
         } else {
-            println{"File in question does not exist on local (/home/maria_dev). Please upload and re-run .jar file"}
+            println{"File in question does not exist on local (/home/maria_dev). Check /user/maria_dev for file; otherwise, please upload and re-run .jar file"}
         }
     }
 }
@@ -59,11 +60,18 @@ class CSVDataset(var filename: String) {
 object Project2Code{
 
     // Put any global variables here.
-
+    val spark: SparkSession = SparkSession
+      .builder()
+      .master("local[3]")
+      .appName("Project2App")
+      .getOrCreate()
+    spark.sparkContext.setLogLevel("ERROR")
+    val sc = spark.sparkContext
     def main(args: Array[String]): Unit =  {
         var CSVInstance = new CSVDataset("merged_data.csv")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
+        Autopsy_Query()
     }
 
     // Global functions go here.
@@ -87,4 +95,28 @@ object Project2Code{
     //     bw.close()
     // }
 
+    def Autopsy_Query(): Unit = {
+        println("This query shows what percentage of deaths resulted in autopsies, versus no autopsies, from 2005-2015.")
+        var autopsySchema = new StructType().add("autopsy", StringType, true).add("current_data_year", IntegerType, true)
+        var autopsyDF = spark.read.format("csv").option("header",true).schema(autopsySchema).load("merged_data.csv")
+        //autopsyDF.groupBy("current_data_year","autopsy").count().show(false)
+        autopsyDF.show(false)
+    }
+
+    def Deadliest_Timeliens(): Unit = {
+        println("This is the query for generating the deadliest day of the week, month, and year.")
+        
+        var dayofweekSchema =   new StructType().add("day_of_week_of_death", IntegerType, true).add("current_data_year", IntegerType, true)
+        var dayofweekDF = spark.read.format("csv").option("header",true).schema(dayofweekSchema).load("merged_data.csv")
+        dayofweekDF.show(false)
+
+        var monthDeathsSchema = new StructType().add("month_of_death", IntegerType, true).add("current_data_year", IntegerType, true)
+        var monthDeathsDF = spark.read.format("csv").option("header",true).schema(monthDeathsSchema).load("merged_data.csv")
+        //var processeddayofweekDF = dayofweekDF.groupBy("current_data_year").count()
+        monthDeathsDF.show()
+
+        var yearDeathsSchema =  new StructType().add("current_data_year", IntegerType, true)
+        var yearDeathsDF = spark.read.format("csv").option("header",true).schema(yearDeathsSchema).load("merged_data.csv")
+        yearDeathsDF.show()
+    }
 }
