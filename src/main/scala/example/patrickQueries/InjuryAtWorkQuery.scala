@@ -9,7 +9,7 @@ class InjuryAtWorkQuery {
 
       val spark: SparkSession = SparkSession
         .builder()
-        .master("local[3]")
+        .master("local")
         .appName("PatrickQuery")
         .getOrCreate()
 
@@ -41,7 +41,8 @@ class InjuryAtWorkQuery {
 
       // filter the data based on injuries at work
       val iawDF = mortDF.filter(mortDF("injury_at_work") === "Y")
-      val iawDFLimited = spark.sql("select injury_at_work, activity_code from iawDF where activity_code > 9")
+      iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp")
+      val iawDFLimited = spark.sql("select injury_at_work, activity_code from iawDFGlobalTemp where activity_code > 9")
 
       // count how many people died from an injury at work
       val iawTotal = iawDFLimited.count()
