@@ -77,7 +77,8 @@ object Project2Code{
         CSVInstance.copyFromMariaDev()
         val mainDataframe  = spark.read.parquet("/user/maria_dev/mortData/part-*")
         clear()
-        Autopsy_Query(mainDataframe)
+        //Autopsy_Query(mainDataframe)
+        MainDeathsInactive(mainDataframe)
         //println(mainDataframe.show(false))
     }
 
@@ -169,23 +170,24 @@ object Project2Code{
             CSVDataYearList += s"datacsv__$year_input.csv/part-00*"
             //println(CSVDataYearList)
         }
-        MergeFiles(CSVDataYearList, "merged_autopsy_data.csv")
+        //MergeFiles(CSVDataYearList, "merged_autopsy_data.csv")
     }
 
-    def Deadliest_Timelines(): Unit = {
-        println("This is the query for generating the deadliest day of the week, month, and year.")
-        
-        var dayofweekSchema =   new StructType().add("day_of_week_of_death", IntegerType, true).add("current_data_year", IntegerType, true)
-        var dayofweekDF = spark.read.format("csv").option("header",true).schema(dayofweekSchema).load("merged_data.csv")
-        dayofweekDF.show(false)
-
-        var monthDeathsSchema = new StructType().add("month_of_death", IntegerType, true).add("current_data_year", IntegerType, true)
-        var monthDeathsDF = spark.read.format("csv").option("header",true).schema(monthDeathsSchema).load("merged_data.csv")
-        //var processeddayofweekDF = dayofweekDF.groupBy("current_data_year").count()
-        monthDeathsDF.show()
-
-        var yearDeathsSchema =  new StructType().add("current_data_year", IntegerType, true)
-        var yearDeathsDF = spark.read.format("csv").option("header",true).schema(yearDeathsSchema).load("merged_data.csv")
-        yearDeathsDF.show()
+    def MainDeathsInactive(dataframe: DataFrame): Unit = {
+        println("This is the query for generating the top five most common ways by which people die while eating, sitting, or resting.")
+        dataframe.createOrReplaceTempView("FindInactiveDeaths")
+        var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindInactiveDeaths ORDER BY current_data_year")
+        var YearList = YearSQL.collect().toList 
+        dataframe.createOrReplaceTempView("AutopsyView")
+        var CSVDataYearList = ListBuffer[String]()
+        for(year <- YearList){
+            var year_input = year(0)
+            var InactiveSQL = spark.sql(s"SELECT 358_cause_recode, current_data_year FROM AutopsyView WHERE ((activity_code=4) AND (current_data_year=$year_input))")
+            var CountDF = InactiveSQL.groupBy("358_cause_recode").count().as("count").sort(col("count").desc).withColumnRenamed("358_cause_recode","Code").withColumnRenamed("count",s"Cases ($year_input)")
+            var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total_Cases"))
+            var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total_Cases")*100)
+            RelativeDF.drop("Total_Cases")
+            RelativeDF.limit(5).show(false)
+        }
     }
 }
