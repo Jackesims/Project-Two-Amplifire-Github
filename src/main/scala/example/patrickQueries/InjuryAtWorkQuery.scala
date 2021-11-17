@@ -17,43 +17,23 @@ class InjuryAtWorkQuery {
 
       // get the filepath for the parquet file
       val mortDataP = "filepath here"
-
-      // from Ajay's examples:
-
-      // Read Parquet file into DataFrame.
-      // println("Read the Parquet file...")
-      // val parqDF = spark.read.parquet("/tmp/output/people.parquet")
-      // parqDF.printSchema()
-      // parqDF.show()
-
-      // Using SQL queries on Parquet.
-      // println("Create View for Parquet...")
-      // parqDF.createOrReplaceTempView("ParquetTable")
-      // println("Explain the SQL statement to be exeucted on the Parquet View...")
-      // spark.sql("select * from ParquetTable where salary >= 4000").explain()
-      // println("Fetch data from the view using SQL syntax...")
-      // val parkSQL = spark.sql("select * from ParquetTable where salary >= 4000")
-      // parkSQL.show()
-      // parkSQL.printSchema()
-
+      
       // read the parquet file into a dataframe
       val mortDF = spark.read.parquet(mortDataP)
 
       // filter the data based on injuries at work
       val iawDF = mortDF.filter(mortDF("injury_at_work") === "Y")
       iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp")
-      val iawDFLimited = spark.sql("select injury_at_work, activity_code from iawDFGlobalTemp where activity_code > 9")
+      val iawDFAct = spark.sql("select injury_at_work, activity_code from iawDFGlobalTemp where activity_code > 9")
 
       // count how many people died from an injury at work
-      val iawTotal = iawDFLimited.count()
+      val iawActTotal = iawDFAct.count()
 
       // group by activity
-      val iawGBActivity = iawDFLimited.groupBy("activity_code")
+      val iawGBAct = iawDFAct.groupBy("activity_code")
 
       // count deaths with each activity
-      val iawActivityCount = iawGBActivity.count()
-
-
+      val iawActivityCount = iawGBAct.count()
 
     }
 
