@@ -16,13 +16,15 @@ import java.io.PrintWriter;
 import java.io._
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 
 class CSVDataset(var filename: String) {
 
     val path = "hdfs://sandbox-hdp.hortonworks.com:8020/user/maria_dev/"
 
     def CheckFileExists(filename: String): Boolean = {
-        println("Checking to see if file already exists")
+        println("Checking to see if file or folder already exists")
         var CheckExistFlag = Files.exists(Paths.get(filename))
         return CheckExistFlag
     }
@@ -65,16 +67,26 @@ object Project2Code{
       .master("local[3]")
       .appName("Project2App")
       .getOrCreate()
+    clear()
     spark.sparkContext.setLogLevel("ERROR")
     val sc = spark.sparkContext
+    clear()
     def main(args: Array[String]): Unit =  {
-        var CSVInstance = new CSVDataset("merged_data.csv")
+        var CSVInstance = new CSVDataset("mortData")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
-        Autopsy_Query()
+        val mainDataframe  = spark.read.parquet("/user/maria_dev/mortData/part-*")
+        clear()
+        Autopsy_Query(mainDataframe)
+        //println(mainDataframe.show(false))
     }
 
     // Global functions go here.
+
+    def clear() : Unit = {
+        "clear".!
+        Thread.sleep(1000)
+    }
 
     def readFiletoList(filename: String): Seq[String] = {
         // This function opens any file which has lines delimited by returns (\n), and returns
@@ -85,25 +97,82 @@ object Project2Code{
         return lines
     }
 
-    // def writeFile(filename: String, lines: Seq[String]): Unit = {
-    //     // This function takes a list of strings, and writes them to a file.
-    //     val file = new File(filename)
-    //     val bw = new BufferedWriter(new FileWriter(file))
-    //     for (line <- lines) {
-    //         bw.write(line)
-    //     }
-    //     bw.close()
-    // }
-
-    def Autopsy_Query(): Unit = {
-        println("This query shows what percentage of deaths resulted in autopsies, versus no autopsies, from 2005-2015.")
-        var autopsySchema = new StructType().add("autopsy", StringType, true).add("current_data_year", IntegerType, true)
-        var autopsyDF = spark.read.format("csv").option("header",true).schema(autopsySchema).load("merged_data.csv")
-        //autopsyDF.groupBy("current_data_year","autopsy").count().show(false)
-        autopsyDF.show(false)
+        //Convert the mutable listBuffer object into an immutable list
+    def writeFile(filename: String, lines: Seq[String]): Unit = {
+        // This function takes a list of strings, and writes them to a file.
+        val file = new File(filename)
+        val bw = new BufferedWriter(new FileWriter(file))
+        for (line <- lines) {
+            bw.write(line)
+        }
+        bw.close()
     }
 
-    def Deadliest_Timeliens(): Unit = {
+    def MergeFiles(filelist: Seq[String], merged_filename: String): Unit = {
+        var listBufferCSVData = ListBuffer[String]()
+        val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
+        var FileIterator: Int = 0
+        for(file <- filelist) {
+            var split1 = file.split(".")(0)
+            var year = split1.split("__")(1)
+            var LineIterator: Int = 0
+            var bufferedSource = Source.fromFile(file)
+            val srcPath=new Path(file)
+            for (line <- bufferedSource.getLines) {
+                if((LineIterator == 0)){
+                // If first line of CSV and first file to be accessed, include the line into the listBuffer. This is the CSV file header
+                    listBufferCSVData += s"$year\n"
+                    listBufferCSVData += line
+                }else{
+                // If not first line of CSV, then it is a record entry. Include in listBuffer.
+                    listBufferCSVData += line
+                }
+                LineIterator += 1
+            }
+            bufferedSource.close
+            println(srcPath)
+            fs.delete(srcPath,true)
+            FileIterator += 1
+        }
+        var listCSVData = listBufferCSVData.toList
+        writeFile(merged_filename, listCSVData)
+    }
+
+    def getListOfFiles(dir: String):List[File] = {
+        val d = new File(dir)
+        if (d.exists && d.isDirectory) {
+            var fileList = d.listFiles.filter(_.isFile).toList
+            return fileList
+        } else {
+            var fileList = List[File]()
+            return fileList
+        }
+    }
+
+    def Autopsy_Query(dataframe: DataFrame): Unit = {
+        println("This query shows what percentage of deaths resulted in autopsies, versus no autopsies, from 2005-2015.")
+        dataframe.createOrReplaceTempView("FindYears")
+        var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindYears ORDER BY current_data_year")
+        var YearList = YearSQL.collect().toList 
+        dataframe.createOrReplaceTempView("AutopsyView")
+        var CSVDataYearList = ListBuffer[String]()
+        for(year <- YearList){
+            var year_input = year(0)
+            var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView WHERE current_data_year=$year_input")
+            var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
+            var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
+            var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases"))
+            RelativeDF.drop("total_cases")
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"datacsv__$year_input.csv")
+            var newlist = getListOfFiles(s"/user/maria_dev/datacsv__$year_input.csv")
+            print(newlist)
+            CSVDataYearList += s"datacsv__$year_input.csv/part-00*"
+            //println(CSVDataYearList)
+        }
+        MergeFiles(CSVDataYearList, "merged_autopsy_data.csv")
+    }
+
+    def Deadliest_Timelines(): Unit = {
         println("This is the query for generating the deadliest day of the week, month, and year.")
         
         var dayofweekSchema =   new StructType().add("day_of_week_of_death", IntegerType, true).add("current_data_year", IntegerType, true)
