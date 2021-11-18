@@ -179,18 +179,13 @@ object Main extends App {
 
             //Jared
             //First one gives the years, second gives the top deaths by cause
-            val vitalDF = parqDF1.where(col("activity_code") === "4")
-            .groupBy(col("current_data_year"))
+            val cancerDF = allDataDF.where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
+            .select(col("39_cause_recode"), col("sex"))
+            .groupBy(col("39_cause_recode"), col("sex"))
             .count()
             .orderBy(col("count").desc).toDF()
-            .show(13,100, false)
 
-            val vitalDF2 = parqDF1.where(col("activity_code") === "4")
-            .groupBy(col("358_cause_recode"))
-            .count()
-            .orderBy(col("count").desc).toDF()
-            .limit(10)
-            .show(456,100,false)
+            cancerDF.show(1000,100,false)
         }
         else if(option == 5) {
 
