@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.Window
 
-class CSVDataset(var filename: String) {
+class Dataset(var filename: String) {
 
     val path = "hdfs://sandbox-hdp.hortonworks.com:8020/user/maria_dev/"
 
@@ -77,13 +77,13 @@ object Project2Code{
     val MappingDataFrame = spark.read.option("header",true).csv("All_Schemas.csv")
 
     def main(args: Array[String]): Unit =  {
-        var CSVInstance = new CSVDataset("mortData")
+        var CSVInstance = new Dataset("mortData")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
-        val mainDataframe  = spark.read.parquet("/user/maria_dev/mortData/part-*")
+        val mainDataframe  = spark.read.parquet("/user/maria_dev/mortData/Merged_Parquet/part-*")
         //clear()
         //Autopsy_Query(mainDataframe)
-        MainDeathsInactive(mainDataframe)
+        //MainDeathsInactive(mainDataframe)
         //println(mainDataframe.show(false))
           var quit = false;
         var option = 0;
@@ -125,24 +125,39 @@ object Project2Code{
                         //.write.csv("/user/maria_dev/output3.csv")
                 }
                 else if(option == 2) {
-                // Education Query
-                println("\nDoing Education Query...")
-                mainDataframe
-                    .filter("detail_age > 18")
-                    .groupBy("sex", "education_2003_revision")
-                    .agg(
-                    avg("detail_age").as("Avg Age"), 
-                    count("*").alias("Total Number") )
-                    .orderBy("sex","education_2003_revision")
-                    .coalesce(1)
-                    .show(50)
-                    //.write.csv("/user/maria_dev/output2.csv");
+                    // Education Query
+                    println("\nDoing Education Query...")
+                    mainDataframe
+                        .filter("detail_age > 18")
+                        .groupBy("sex", "education_2003_revision")
+                        .agg(
+                        avg("detail_age").as("Avg Age"), 
+                        count("*").alias("Total Number") )
+                        .orderBy("sex","education_2003_revision")
+                        .coalesce(1)
+                        .show(50)
+                        //.write.csv("/user/maria_dev/output2.csv");
                 }
                 else if(option == 3) {
-                    println("This is option 3")
+                    //Jared
+                    val lightningDF = mainDataframe.where(col("358_cause_recode") === "416")
+                    .groupBy(col("age_recode_52"))
+                    .count()
+                    .orderBy(col("count").desc).toDF()
+                    .show(52,100, false)
+                    
+                    val avgerageAge = mainDataframe.filter("358_cause_recode = 416")
+                    .agg( avg("detail_age").as("Avg Age") )
+                    .show()
                 }
                 else if(option == 4) {
-                    println("This is option 4")
+                    val cancerDF = mainDataframe.where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
+                    .select(col("39_cause_recode"), col("sex"))
+                    .groupBy(col("39_cause_recode"), col("sex"))
+                    .count()
+                    .orderBy(col("count").desc).toDF()
+
+                    cancerDF.show(1000,100,false)
                 }
                 else if(option == 5) {
                     println("This is option 5")
@@ -199,57 +214,6 @@ object Project2Code{
         return lines
     }
 
-        //Convert the mutable listBuffer object into an immutable list
-    def writeFile(filename: String, lines: Seq[String]): Unit = {
-        // This function takes a list of strings, and writes them to a file.
-        val file = new File(filename)
-        val bw = new BufferedWriter(new FileWriter(file))
-        for (line <- lines) {
-            bw.write(line)
-        }
-        bw.close()
-    }
-
-    def MergeFiles(filelist: Seq[String], merged_filename: String): Unit = {
-        var listBufferCSVData = ListBuffer[String]()
-        val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-        var FileIterator: Int = 0
-        for(file <- filelist) {
-            var split1 = file.split(".")(0)
-            var year = split1.split("__")(1)
-            var LineIterator: Int = 0
-            var bufferedSource = Source.fromFile(file)
-            val srcPath=new Path(file)
-            for (line <- bufferedSource.getLines) {
-                if((LineIterator == 0)){
-                // If first line of CSV and first file to be accessed, include the line into the listBuffer. This is the CSV file header
-                    listBufferCSVData += s"$year\n"
-                    listBufferCSVData += line
-                }else{
-                // If not first line of CSV, then it is a record entry. Include in listBuffer.
-                    listBufferCSVData += line
-                }
-                LineIterator += 1
-            }
-            bufferedSource.close
-            println(srcPath)
-            fs.delete(srcPath,true)
-            FileIterator += 1
-        }
-        var listCSVData = listBufferCSVData.toList
-        writeFile(merged_filename, listCSVData)
-    }
-
-    def getListOfFiles(dir: String):List[File] = {
-        val d = new File(dir)
-        if (d.exists && d.isDirectory) {
-            var fileList = d.listFiles.filter(_.isFile).toList
-            return fileList
-        } else {
-            var fileList = List[File]()
-            return fileList
-        }
-    }
 
     def Autopsy_Query(dataframe: DataFrame): Unit = {
         println("This query shows what percentage of deaths resulted in autopsies, versus no autopsies, from 2005-2015.")
@@ -257,21 +221,32 @@ object Project2Code{
         var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindYears ORDER BY current_data_year")
         var YearList = YearSQL.collect().toList 
         dataframe.createOrReplaceTempView("AutopsyView")
-        var CSVDataYearList = ListBuffer[String]()
-        for(year <- YearList){
-            var year_input = year(0)
-            var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView WHERE current_data_year=$year_input")
+        println("What type of analysis to return? (Provide 'Total' or 'Annual')")
+        var UserInput = scala.io.StdIn.readLine()
+        if(UserInput=="Total"){
+            var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView")
             var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
             var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
             var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases"))
-            RelativeDF.drop("total_cases")
-            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"datacsv__$year_input.csv")
-            var newlist = getListOfFiles(s"/user/maria_dev/datacsv__$year_input.csv")
-            print(newlist)
-            CSVDataYearList += s"datacsv__$year_input.csv/part-00*"
-            //println(CSVDataYearList)
+            RelativeDF.show(false)
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/Autopsies_2005_through_2015.csv")
+        }else if (UserInput=="Annual") {
+            var CSVDataYearList = ListBuffer[String]()
+            for(year <- YearList){
+                var year_input = year(0)
+                var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView WHERE current_data_year=$year_input")
+                var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
+                var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
+                var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases")*100)
+                RelativeDF.drop("total_cases")
+                RelativeDF.show(false)
+                RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/datacsv__$year_input.csv")
+                //var newlist = getListOfFiles(s"/user/maria_dev/datacsv__$year_input.csv")
+                //print(newlist)
+                //CSVDataYearList += s"datacsv__$year_input.csv/part-00*"
+                //println(CSVDataYearList)
+            }
         }
-        //MergeFiles(CSVDataYearList, "merged_autopsy_data.csv")
     }
 
     def MainDeathsInactive(dataframe: DataFrame): Unit = {
@@ -281,45 +256,34 @@ object Project2Code{
         var YearList = YearSQL.collect().toList 
         dataframe.createOrReplaceTempView("InactiveDeaths")
         var CSVDataYearList = ListBuffer[String]()
-        //MappingDataFrame.show(false)
         MappingDataFrame.createOrReplaceTempView("MappingCodesView")
         for(year <- YearList){
             var year_input = year(0)
             var InactiveSQL = spark.sql(s"SELECT 358_cause_recode, current_data_year FROM InactiveDeaths WHERE ((activity_code=4) AND (current_data_year=$year_input))")
-            var CodeColumn = "358_cause_recode"
             var CountDF = InactiveSQL.groupBy("358_cause_recode").count().as("count").sort(col("count").desc).withColumnRenamed("count",s"Cases ($year_input)")
             var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total_Cases"))
             var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total_Cases")*100)
-            RelativeDF.drop("Total_Cases")
             RelativeDF.createOrReplaceTempView("CodeTranslationView")
             RelativeDF.limit(5).show(false)
             var yearString = s"_ - current_data_year - $year_input"
             var CodeSQL = spark.sql("SELECT 358_cause_recode FROM CodeTranslationView")
             var CodeList = CodeSQL.collect().toList
-            var CodeReplacement = ListBuffer[Seq[String]]()
+            var CodeReplacement = ListBuffer[Any]()
             var count = 1
             for(code <- CodeList){
                 if(count < 6) {
                     var code_input = code(0).toString()
-                    var String2Search : String = s"_ - $CodeColumn - $code_input"
+                    var String2Search : String = s"_ - 358_cause_recode - $code_input"
                     var CodeColumnDF = MappingDataFrame.select(s"$String2Search").first()(0)
                     var CodeColumnString = CodeColumnDF.toString()
-                    CodeReplacement += Seq(code_input, CodeColumnString)
+                    CodeReplacement += CodeColumnString
                     count += 1
                 }
             }
             var CodeStringList = CodeReplacement.toList
-            println(CodeStringList)
-            //var rdd = sc.parallelize(CodeStringList)
-            //var schema = Seq("358_cause_recode", "Cause")
-            //val data=spark.createDataFrame(CodeStringList).toDF(schema:_*)
-            //var Hello = spark.createDataFrame(rdd)
-            //rdd.collect().foreach(println)
-            //var List2Dataframe = spark.createDataFrame(rdd)
-            //List2Dataframe.show(false)
-            //var df1 = CodeStringList.toDF()
-            //df1.show(false)
-            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"vital_datacsv__$year_input.csv")
+            //var dfFromList = spark.createDataFrame(CodeStringList).toDF()
+            //dfFromList.show(false)
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/InactiveDeaths/Yearly/vital_datacsv__$year_input.csv")
             }
         }
     }
