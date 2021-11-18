@@ -18,6 +18,8 @@ import scala.collection.mutable.ListBuffer
 import scala.io.Source
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql._
+
 
 class CSVDataset(var filename: String) {
 
@@ -69,14 +71,17 @@ object Project2Code{
       .getOrCreate()
     clear()
     spark.sparkContext.setLogLevel("ERROR")
+    import spark.implicits._
     val sc = spark.sparkContext
     clear()
+    val MappingDataFrame = spark.read.option("header",true).csv("All_Schemas.csv")
+
     def main(args: Array[String]): Unit =  {
         var CSVInstance = new CSVDataset("mortData")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
         val mainDataframe  = spark.read.parquet("/user/maria_dev/mortData/part-*")
-        clear()
+        //clear()
         //Autopsy_Query(mainDataframe)
         MainDeathsInactive(mainDataframe)
         //println(mainDataframe.show(false))
@@ -178,16 +183,47 @@ object Project2Code{
         dataframe.createOrReplaceTempView("FindInactiveDeaths")
         var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindInactiveDeaths ORDER BY current_data_year")
         var YearList = YearSQL.collect().toList 
-        dataframe.createOrReplaceTempView("AutopsyView")
+        dataframe.createOrReplaceTempView("InactiveDeaths")
         var CSVDataYearList = ListBuffer[String]()
+        //MappingDataFrame.show(false)
+        MappingDataFrame.createOrReplaceTempView("MappingCodesView")
         for(year <- YearList){
             var year_input = year(0)
-            var InactiveSQL = spark.sql(s"SELECT 358_cause_recode, current_data_year FROM AutopsyView WHERE ((activity_code=4) AND (current_data_year=$year_input))")
-            var CountDF = InactiveSQL.groupBy("358_cause_recode").count().as("count").sort(col("count").desc).withColumnRenamed("358_cause_recode","Code").withColumnRenamed("count",s"Cases ($year_input)")
+            var InactiveSQL = spark.sql(s"SELECT 358_cause_recode, current_data_year FROM InactiveDeaths WHERE ((activity_code=4) AND (current_data_year=$year_input))")
+            var CodeColumn = "358_cause_recode"
+            var CountDF = InactiveSQL.groupBy("358_cause_recode").count().as("count").sort(col("count").desc).withColumnRenamed("count",s"Cases ($year_input)")
             var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total_Cases"))
             var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total_Cases")*100)
             RelativeDF.drop("Total_Cases")
+            RelativeDF.createOrReplaceTempView("CodeTranslationView")
             RelativeDF.limit(5).show(false)
+            var yearString = s"_ - current_data_year - $year_input"
+            var CodeSQL = spark.sql("SELECT 358_cause_recode FROM CodeTranslationView")
+            var CodeList = CodeSQL.collect().toList
+            var CodeReplacement = ListBuffer[Seq[String]]()
+            var count = 1
+            for(code <- CodeList){
+                if(count < 6) {
+                    var code_input = code(0).toString()
+                    var String2Search : String = s"_ - $CodeColumn - $code_input"
+                    var CodeColumnDF = MappingDataFrame.select(s"$String2Search").first()(0)
+                    var CodeColumnString = CodeColumnDF.toString()
+                    CodeReplacement += Seq(code_input, CodeColumnString)
+                    count += 1
+                }
+            }
+            var CodeStringList = CodeReplacement.toList
+            println(CodeStringList)
+            //var rdd = sc.parallelize(CodeStringList)
+            //var schema = Seq("358_cause_recode", "Cause")
+            //val data=spark.createDataFrame(CodeStringList).toDF(schema:_*)
+            //var Hello = spark.createDataFrame(rdd)
+            //rdd.collect().foreach(println)
+            //var List2Dataframe = spark.createDataFrame(rdd)
+            //List2Dataframe.show(false)
+            //var df1 = CodeStringList.toDF()
+            //df1.show(false)
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"vital_datacsv__$year_input.csv")
+            }
         }
     }
-}
