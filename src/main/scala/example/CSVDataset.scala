@@ -161,10 +161,36 @@ object Main extends App {
             //.write.csv("/user/maria_dev/output2.csv");
         }
         else if(option == 3) {
+            
+            //Jared
+            val allDataDF = spark.read.parquet("/user/maria_dev/merged_data.parquet")   
 
+            val lightningDF = parqDF1.where(col("358_cause_recode") === "416")
+            .groupBy(col("age_recode_52"))
+            .count()
+            .orderBy(col("count").desc).toDF()
+            .show(52,100, false)
+            
+            val avgerageAge = parqDF1.filter("358_cause_recode = 416")
+            .agg( avg("detail_age").as("Avg Age") )
+            .show()
         }
         else if(option == 4) {
 
+            //Jared
+            //First one gives the years, second gives the top deaths by cause
+            val vitalDF = parqDF1.where(col("activity_code") === "4")
+            .groupBy(col("current_data_year"))
+            .count()
+            .orderBy(col("count").desc).toDF()
+            .show(13,100, false)
+
+            val vitalDF2 = parqDF1.where(col("activity_code") === "4")
+            .groupBy(col("358_cause_recode"))
+            .count()
+            .orderBy(col("count").desc).toDF()
+            .limit(10)
+            .show(456,100,false)
         }
         else if(option == 5) {
 
