@@ -16,24 +16,27 @@ class InjuryAtWorkQuery {
       val sc = spark.sparkContext
 
       // get the filepath for the parquet file
-      val mortDataP = "filepath here"
-      
       // read the parquet file into a dataframe
-      val mortDF = spark.read.parquet(mortDataP)
-
       // filter the data based on injuries at work
-      val iawDF = mortDF.filter(mortDF("injury_at_work") === "Y")
-      iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp")
-      val iawDFAct = spark.sql("select injury_at_work, activity_code from globaltemp.iawDFGlobalTemp where activity_code > 9")
+      val mortDataP = "hdfs://sandbox-hdp.hortonworks.com:8020/user/maria_dev/mortData";
+      val mortDF = spark.read.parquet(mortDataP);
+      val iawDF = mortDF.filter(mortDF("injury_at_work") === "Y");
+
+      iawDF.count();
+
+      // create a globaltemp view for sql queries
+      // select relevant columns
+      iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp");
+      val iawDFAct = spark.sql("SELECT injury_at_work, activity_code FROM global_temp.iawDFGlobalTemp");
 
       // count how many people died from an injury at work
-      val iawActTotal = iawDFAct.count()
+      val iawActTotal = iawDFAct.count();
 
       // group by activity
-      val iawGBAct = iawDFAct.groupBy("activity_code")
+      val iawGBAct = iawDFAct.groupBy("activity_code");
 
       // count deaths with each activity
-      val iawActivityCount = iawGBAct.count()
+      val iawActivityCount = iawGBAct.count().show();
 
     }
 
