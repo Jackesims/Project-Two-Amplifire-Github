@@ -8,6 +8,12 @@ import org.apache.spark.sql.SparkSession
 import java.nio.file.{Paths, Files}
 import scala.sys.process._
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+import scala.collection.JavaConversions._
+import org.apache.spark.sql.expressions.Window
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,7 +66,7 @@ object CSVDataset {
 
     // Put any global variables here.
 
-    def main(args: Array[String]): Unit =  {
+    def start : Unit = {
         var CSVInstance = new CSVDataset("merged_data.csv")
         // Move merged file to HDFS
         CSVInstance.copyFromMariaDev()
@@ -87,4 +93,115 @@ object CSVDataset {
     //     bw.close()
     // }
 
+}
+
+object Main extends App {
+ val spark = SparkSession
+      .builder()
+      .master("local[1]")
+      .appName("Spark SQL - Functions")
+      .getOrCreate()
+
+    import spark.implicits._
+    spark.sparkContext.setLogLevel("ERROR")
+    println("\nReading the data Set...\n")
+    val parqDF1 = spark.read.parquet("/user/maria_dev/merged_data.parquet")
+    println("Done...\n")
+
+  var quit = false;
+  var option = 0;
+  do {
+    println("What query would you like running?")
+    println("Print marital analysis (1)")
+    println("Print education analysis (2)")
+    println("To quit (13)")
+    try {
+      option = scala.io.StdIn.readInt();
+      if(option >0 && option < 14)
+      {
+        if(option == 1) {
+          // Marital Query
+          println("Doing the marital query...")
+          parqDF1
+            .filter("detail_age > 18")
+            .groupBy("sex", "marital_status")
+            .agg(
+              avg("detail_age").as("Avg Age"), 
+              count("*").alias("Total Number") )
+            .orderBy("sex","marital_status")
+            .coalesce(1)
+            .show(50)
+            //.write.csv("/user/maria_dev/output1.csv");
+          
+          val part = Window.partitionBy("sex","marital_status").orderBy(col("count").desc)
+          parqDF1
+            .filter("detail_age > 18")
+            .groupBy("sex", "marital_status","358_cause_recode")
+            .count()
+            .withColumn("CauseRank",row_number.over(part))
+            .filter("CauseRank < 6")
+            .orderBy("sex","marital_status")
+            .coalesce(1)
+            .show(50)
+            //.write.csv("/user/maria_dev/output3.csv")
+
+        }
+        else if(option == 2) {
+          // Education Query
+          println("\nDoing Education Query...")
+          parqDF1
+            .filter("detail_age > 18")
+            .groupBy("sex", "education_2003_revision")
+            .agg(
+              avg("detail_age").as("Avg Age"), 
+              count("*").alias("Total Number") )
+            .orderBy("sex","education_2003_revision")
+            .coalesce(1)
+            .show(50)
+            //.write.csv("/user/maria_dev/output2.csv");
+        }
+        else if(option == 3) {
+
+        }
+        else if(option == 4) {
+
+        }
+        else if(option == 5) {
+
+        }
+        else if(option == 6) {
+
+        }
+        else if(option == 7) {
+
+        }
+        else if(option == 8) {
+
+        }
+        else if(option == 9) {
+
+        }
+        else if(option == 10) {
+
+        }
+        else if(option == 11) {
+
+        }
+        else if(option == 12) {
+
+        }
+        else if(option == 13) {
+          println("Exiting...")
+          quit = true;
+        }
+
+      }
+      else
+        println("Wrong option. Try again\n")
+    }
+    catch {
+      case _: Throwable => println("Wrong input. Try again\n")
+    }
+
+  } while(!quit)   
 }
