@@ -19,7 +19,7 @@ import scala.io.Source
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql._
-
+import org.apache.spark.sql.expressions.Window
 
 class CSVDataset(var filename: String) {
 
@@ -85,6 +85,102 @@ object Project2Code{
         //Autopsy_Query(mainDataframe)
         MainDeathsInactive(mainDataframe)
         //println(mainDataframe.show(false))
+          var quit = false;
+        var option = 0;
+        do {
+            println("What query would you like running?")
+            println("Print marital analysis (1)")
+            println("Print education analysis (2)")
+            println("Print autopsy versus no autopsy (11)")
+            println("Print leading causes of death while eating, sleeping, and resting (12)")
+            println("To quit (13)")
+            try {
+            option = scala.io.StdIn.readInt();
+            if(option >0 && option < 14)
+            {
+                if(option == 1) {
+                // Marital Query
+                    println("Doing the marital query...")
+                    mainDataframe
+                        .filter("detail_age > 18")
+                        .groupBy("sex", "marital_status")
+                        .agg(
+                        avg("detail_age").as("Avg Age"), 
+                        count("*").alias("Total Number") )
+                        .orderBy("sex","marital_status")
+                        .coalesce(1)
+                        .show(50)
+                        //.write.csv("/user/maria_dev/output1.csv");
+                    
+                    val part = Window.partitionBy("sex","marital_status").orderBy(col("count").desc)
+                    mainDataframe
+                        .filter("detail_age > 18")
+                        .groupBy("sex", "marital_status","358_cause_recode")
+                        .count()
+                        .withColumn("CauseRank",row_number.over(part))
+                        .filter("CauseRank < 6")
+                        .orderBy("sex","marital_status")
+                        .coalesce(1)
+                        .show(50)
+                        //.write.csv("/user/maria_dev/output3.csv")
+                }
+                else if(option == 2) {
+                // Education Query
+                println("\nDoing Education Query...")
+                mainDataframe
+                    .filter("detail_age > 18")
+                    .groupBy("sex", "education_2003_revision")
+                    .agg(
+                    avg("detail_age").as("Avg Age"), 
+                    count("*").alias("Total Number") )
+                    .orderBy("sex","education_2003_revision")
+                    .coalesce(1)
+                    .show(50)
+                    //.write.csv("/user/maria_dev/output2.csv");
+                }
+                else if(option == 3) {
+                    println("This is option 3")
+                }
+                else if(option == 4) {
+                    println("This is option 4")
+                }
+                else if(option == 5) {
+                    println("This is option 5")
+                }
+                else if(option == 6) {
+                    println("This is option 6")
+                }
+                else if(option == 7) {
+                    println("This is option 7")
+                }
+                else if(option == 8) {
+                    println("This is option 8")
+                }
+                else if(option == 9) {
+                    println("This is option 9")
+                }
+                else if(option == 10) {
+                    println("This is option 10")
+                }
+                else if(option == 11) {
+                    Autopsy_Query(mainDataframe)
+                }
+                else if(option == 12) {
+                    MainDeathsInactive(mainDataframe)
+                }
+                else if(option == 13) {
+                println("Exiting...")
+                quit = true;
+                }
+            }
+            else
+                println("Wrong option. Try again\n")
+            }
+            catch {
+            case _: Throwable => println("Wrong input. Try again\n")
+            }
+        } 
+        while(!quit)
     }
 
     // Global functions go here.
