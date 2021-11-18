@@ -15,7 +15,7 @@ class IawEducationQuery {
 
   // only show iaw and educ from iaw gt
   // _ double check the code for educ
-  val iawDFEd = spark.sql("select injury_at_work, education_code from iawDFGlobalTemp")
+  val iawDFEd = spark.sql("select injury_at_work, education_code from globaltemp.iawDFGlobalTemp")
 
   val iawGBEd = iawDFEd.groupBy("education_code")
 

@@ -24,7 +24,7 @@ class InjuryAtWorkQuery {
       // filter the data based on injuries at work
       val iawDF = mortDF.filter(mortDF("injury_at_work") === "Y")
       iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp")
-      val iawDFAct = spark.sql("select injury_at_work, activity_code from iawDFGlobalTemp where activity_code > 9")
+      val iawDFAct = spark.sql("select injury_at_work, activity_code from globaltemp.iawDFGlobalTemp where activity_code > 9")
 
       // count how many people died from an injury at work
       val iawActTotal = iawDFAct.count()
