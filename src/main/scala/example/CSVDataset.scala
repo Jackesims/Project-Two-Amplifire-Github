@@ -11,6 +11,7 @@ import scala.sys.process._
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.DataFrame
 import scala.collection.JavaConversions._
 import org.apache.spark.sql.expressions.Window
 
@@ -35,6 +36,21 @@ object Main extends App {
     println("\nReading the data Set...\n")
     val parqDF1 = spark.read.parquet("/user/maria_dev/merged_data.parquet")
     println("Done...\n")
+ 
+ 
+    /**
+      * Prompt to store the dataframe in a folder as a collection of CSV files
+      *
+      * @param df
+      * @param folderPath
+      */
+    def storeCSV (df: DataFrame, folderPath: String) : Unit = {
+        if (scala.io.StdIn.readLine("Store in CSV? >> (y/n)").toLowerCase == "y")
+                df.coalesce(1)
+                .write
+                .mode("overwrite")
+                .csv(s"$folderPath")
+    }
 
   var quit = false;
   var option = 0;
