@@ -137,7 +137,7 @@ object Main extends App {
             val cancerDF2 = cancerDF
             .agg(sum("count").as("Sum of people sho died due to cancer"))
 
-            val cancerDF3 = allDataDF.select(col("39_cause_recode"), col("current_data_year"))
+            val cancerDF3 = parqDF1.select(col("39_cause_recode"), col("current_data_year"))
             .where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
             .groupBy(col("current_data_year"))
             .count()
