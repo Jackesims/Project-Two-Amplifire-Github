@@ -116,7 +116,8 @@ object Main extends App {
             .groupBy(col("age_recode_52"))
             .count()
             .orderBy(col("count").desc).toDF()
-            .show(52,100, false)
+
+            lightningDF.show(52,100, false)
             
             val avgerageAge = parqDF1.filter("358_cause_recode = 416")
             .agg( avg("detail_age").as("Avg Age") )
