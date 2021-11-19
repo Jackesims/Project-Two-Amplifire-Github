@@ -2,27 +2,26 @@ package example.patrickQueries
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
-class IawAgeQuery {
+class IawAgeQuery {  
+  
+  def ageQuery: Unit = {
 
-  val spark: SparkSession = SparkSession
+    val spark: SparkSession = SparkSession
     .builder()
-    .master("local")
-    .appName("PatrickQuery")
+    .master("local[1]")
+    .appName("PatrickQuery2")
     .getOrCreate()
 
-  val sc = spark.sparkContext
+    val sc = spark.sparkContext
 
-  // only show iaw and age from iaw gt
-  // _ double check the code for age
-  val iawDFAge = spark.sql("SELECT injury_at_work, detail_age FROM global_temp.iawDFGlobalTemp WHERE detail_age_type === 1")
-
-  iawDFAge.show()
-
-  val iawGBAge = iawDFAge.groupBy("detail_age")
-
-  val iawGBAgeCount = iawGBAge.count()
-
-  iawGBAgeCount.show()
+    val iawDFAge = spark.sql("SELECT injury_at_work, detail_age FROM global_temp.iawDFGlobalTemp")
+    val iawAgesDF = iawDFAge.where(col("detail_age") === "1")
+    .groupBy("detail_age")
+    .count()
+    .orderBy(col("detail_age").desc).toDF
+    .show(false)
+  }
 
 }
