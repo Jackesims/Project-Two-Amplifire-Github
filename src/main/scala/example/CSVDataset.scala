@@ -147,9 +147,9 @@ object Main extends App {
           // Query 1: Manner of Death % Each Year
           parqDF1.createOrReplaceTempView("ParquetTable")
           val parkSQL2005 = spark.sql("SELECT manner_of_death, current_data_year, COUNT(manner_of_death) AS MOD from ParquetTable group BY current_data_year, manner_of_death Order By current_data_year desc")
-          parkSQL2005.repartition(1).write.csv("/user/maria_dev/MannerOutput2005.csv")
+          //parkSQL2005.repartition(1).write.csv("/user/maria_dev/MannerOutput2005.csv")
           parkSQL2005.show(70,100,false)
-  
+          storeCSV(parkSQL2005, "/user/maria_dev/MannerOutput2005.csv")
         }
         else if(option == 6) {
          
@@ -158,8 +158,8 @@ object Main extends App {
           val parkSQL2 = spark.sql("SELECT 130_infant_cause_recode, COUNT(130_infant_cause_recode) AS ICR from ParquetTable GROUP BY 130_infant_cause_recode ORDER BY ICR DESC ")
           parkSQL2.limit(5)
           parkSQL2.show(5)
-          parkSQL2.repartition(1).write.csv("/user/maria_dev/babyoutouttrue.csv")
-         
+          //parkSQL2.repartition(1).write.csv("/user/maria_dev/babyoutouttrue.csv")
+          storeCSV(parkSQL2, "/user/maria_dev/babyoutouttrue.csv")
         }
         else if(option == 7) {
 
