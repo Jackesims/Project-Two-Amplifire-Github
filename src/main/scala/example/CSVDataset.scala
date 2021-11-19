@@ -163,7 +163,6 @@ object Main extends App {
         else if(option == 3) {
             
             //Jared
-            val allDataDF = spark.read.parquet("/user/maria_dev/merged_data.parquet")   
 
             val lightningDF = parqDF1.where(col("358_cause_recode") === "416")
             .groupBy(col("age_recode_52"))
@@ -178,14 +177,24 @@ object Main extends App {
         else if(option == 4) {
 
             //Jared
-            //First one gives the years, second gives the top deaths by cause
-            val cancerDF = allDataDF.where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
+            val cancerDF = parqDF1.where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
             .select(col("39_cause_recode"), col("sex"))
             .groupBy(col("39_cause_recode"), col("sex"))
             .count()
             .orderBy(col("count").desc).toDF()
+            
+            val cancerDF2 = cancerDF
+            .agg(sum("count").as("Sum of people sho died due to cancer"))
+
+            val cancerDF3 = allDataDF.select(col("39_cause_recode"), col("current_data_year"))
+            .where(col("39_cause_recode") > 5 && col("39_cause_recode") < 16)
+            .groupBy(col("current_data_year"))
+            .count()
+            .orderBy(col("count").asc).toDF()
 
             cancerDF.show(1000,100,false)
+            cancerDF2.show(1000,100,false)
+            cancerDF3.show(1000,100,false)
         }
         else if(option == 5) {
 
