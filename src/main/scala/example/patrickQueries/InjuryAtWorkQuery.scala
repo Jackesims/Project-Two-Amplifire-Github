@@ -30,13 +30,19 @@ class InjuryAtWorkQuery {
       val iawDFAct = spark.sql("SELECT injury_at_work, activity_code FROM global_temp.iawDFGlobalTemp");
 
       // count how many people died from an injury at work
+      
       val iawActTotal = iawDFAct.count();
+      println(s"""
+      Between 2005 and 2015, $iawActTotal people were reported to have died from an injury at work.
+      """);
 
       // group by activity
       val iawGBAct = iawDFAct.groupBy("activity_code");
 
       // count deaths with each activity
       val iawActivityCount = iawGBAct.count().show();
+
+      spark.close()
 
     }
 
