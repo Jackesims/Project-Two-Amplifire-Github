@@ -74,7 +74,7 @@ object Project2Code{
     import spark.implicits._
     val sc = spark.sparkContext
     clear()
-    val MappingDataFrame = spark.read.option("header",true).csv("All_Schemas.csv")
+    val MappingDataFrame = spark.read.option("header",true).csv("mortData/All_Schemas.csv")
 
     def main(args: Array[String]): Unit =  {
         var CSVInstance = new Dataset("mortData")
@@ -228,6 +228,7 @@ object Project2Code{
             var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
             var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
             var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases"))
+            println(s"The autopsy statistics for 2005-2015 are presented in the following table:")
             RelativeDF.show(false)
             RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/Autopsies_2005_through_2015.csv")
         }else if (UserInput=="Annual") {
@@ -235,16 +236,13 @@ object Project2Code{
             for(year <- YearList){
                 var year_input = year(0)
                 var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView WHERE current_data_year=$year_input")
-                var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
-                var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
-                var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases")*100)
-                RelativeDF.drop("total_cases")
+                var CountDF = AutopsySQL.groupBy("autopsy").count().as("count").withColumnRenamed("count",s"Cases ($year_input)")
+                var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total"))
+                var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total")*100)
+                println(s"The autopsy statistics for $year_input are presented in the following table:")
+                RelativeDF.drop(RelativeDF("Total"))
                 RelativeDF.show(false)
-                RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/datacsv__$year_input.csv")
-                //var newlist = getListOfFiles(s"/user/maria_dev/datacsv__$year_input.csv")
-                //print(newlist)
-                //CSVDataYearList += s"datacsv__$year_input.csv/part-00*"
-                //println(CSVDataYearList)
+                RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/Yearly/datacsv__$year_input.csv")
             }
         }
     }
@@ -268,7 +266,7 @@ object Project2Code{
             var yearString = s"_ - current_data_year - $year_input"
             var CodeSQL = spark.sql("SELECT 358_cause_recode FROM CodeTranslationView")
             var CodeList = CodeSQL.collect().toList
-            var CodeReplacement = ListBuffer[Any]()
+            var CodeReplacement = ListBuffer[String]()
             var count = 1
             for(code <- CodeList){
                 if(count < 6) {
@@ -281,8 +279,11 @@ object Project2Code{
                 }
             }
             var CodeStringList = CodeReplacement.toList
-            //var dfFromList = spark.createDataFrame(CodeStringList).toDF()
-            //dfFromList.show(false)
+            var CodeDF = CodeStringList.toDS().toDF()
+            //empDF.join(deptDF,empDF.emp_dept_id ==  deptDF.dept_id,"full").show(truncate=False)
+            CodeDF.show(false)
+            //var PresentDF = RelativeDF.withColumn("Cause", CodeDF("value"))
+            //PresentDF.show(false)
             RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/InactiveDeaths/Yearly/vital_datacsv__$year_input.csv")
             }
         }
