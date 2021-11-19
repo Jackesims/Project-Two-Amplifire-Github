@@ -36,6 +36,10 @@ object Main extends App {
     println("\nReading the data Set...\n")
     val parqDF1 = spark.read.parquet("/user/maria_dev/merged_data.parquet")
     println("Done...\n")
+
+    // creating a global_temp for patrick's queries
+    val iawDF = parqDF1.filter(parqDF1("injury_at_work") === "Y");
+    iawDF.createOrReplaceGlobalTempView("iawDFGlobalTemp");
  
  
     /**
@@ -172,11 +176,62 @@ object Main extends App {
         }
         else if(option == 10) {
 
+          val iawDFAct = spark.sql("SELECT injury_at_work, activity_code FROM global_temp.iawDFGlobalTemp");
+
+          val iawActTotal = iawDFAct.count();
+            println(s"""
+  Between 2005 and 2015, $iawActTotal people were reported to have died from an injury at work.
+            """);
+          
+          // group by activity
+          val iawGBAct = iawDFAct.groupBy("activity_code");
+
+          // count deaths with each activity
+          val iawActivityCount = iawGBAct.count();
+
+          iawActivityCount.show()
+
+          storeCSV(iawActivityCount, "/user/maria_dev/injured_at_work/by_activity.csv")
+
         }
         else if(option == 11) {
 
+          // only show iaw and educ from iaw gt
+          val iawDFEd = spark.sql("select injury_at_work, education_reporting_flag, education_1989_revision, education_2003_revision from global_temp.iawDFGlobalTemp")
+    
+          // "1989 revision of education item on certificate"
+          val iawEdu1989DF = iawDFEd.where(col("education_reporting_flag") === "0")
+            .groupBy("education_1989_revision")
+            .count()
+            .orderBy(col("education_1989_revision").desc).toDF
+
+          iawEdu1989DF.show(false)
+
+          storeCSV(iawEdu1989DF, "/user/maria_dev/injured_at_work/by_edu_1989.csv")
+
+          // "2003 revision of education item on certificate"
+          val iawEdu2003DF = iawDFEd.where(col("education_reporting_flag") === "1")
+            .groupBy("education_2003_revision")
+            .count()
+            .orderBy(col("education_2003_revision").desc).toDF
+
+          iawEdu2003DF.show(false)
+
+          storeCSV(iawEdu2003DF, "/user/maria_dev/injured_at_work/by_edu_2003.csv")
+
         }
         else if(option == 12) {
+
+          val iawUnfilterdAgeDF = spark.sql("SELECT injury_at_work, detail_age_type, detail_age FROM global_temp.iawDFGlobalTemp");
+    
+          val iawAgesDF = iawUnfilterdAgeDF.where(col("detail_age_type") === "1" && col("detail_age") < "999")
+            .groupBy("detail_age")
+            .count()
+            .orderBy(col("detail_age").desc).toDF;
+
+          iawAgesDF.show(125, false);
+
+          storeCSV(iawAgesDF, "/user/maria_dev/injured_at_work/by_age.csv")
 
         }
         else if(option == 13) {
