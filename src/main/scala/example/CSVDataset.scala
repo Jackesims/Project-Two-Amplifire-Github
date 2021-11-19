@@ -117,6 +117,8 @@ object Main extends App {
             val avgerageAge = parqDF1.filter("358_cause_recode = 416")
             .agg( avg("detail_age").as("Avg Age") )
             .show()
+         
+          storeCSV(lightningDF, "/user/maria_dev/lightningDeaths.csv")
         }
         else if(option == 4) {
 
