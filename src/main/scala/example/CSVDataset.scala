@@ -64,26 +64,25 @@ object Main extends App {
     println("Print education analysis (2)")
     println("Print lightning analysis (3)")
     println("Print cancer analysis (4)")
-    println("Print  (5)")
-    println("Print  (6)")
-    println("Print  (7)")
-    println("Print  (8)")
-    println("Print  (9)")
-    println("Print  (10)")
-    println("Print  (11)")
-    println("Print  (12)")
-    println("Print  ()")
-    println("Print  ()")
-    println("Print  ()")
-    println("To quit (13)")
+    println("Print Manner of Death analysis (5)")
+    println("Print Infant Death analysis (6)")
+    println("Print Deaths each Month (7)")
+    println("Print Deaths each Week (8)")
+    println("Print Monthly Sport Deaths (9)")
+    println("Print Injury at Work by Activity (10)")
+    println("Print Injury at Work by Education (11)")
+    println("Print Injury at Work by Age (12)")
+    println("Print Autopsy analysis (13)")
+    println("Print Inactive Death analysis (14)")
+    println("To quit (15)")
     try {
       option = scala.io.StdIn.readInt();
-      if(option >0 && option < 14)
+      if(option >0 && option < 16)
       {
         if(option == 1) {
           // Marital Query
           println("Doing the marital query...")
-          parqDF1
+          val output1 = parqDF1
             .filter("detail_age > 18")
             .groupBy("sex", "marital_status")
             .agg(
@@ -91,11 +90,13 @@ object Main extends App {
               count("*").alias("Total Number") )
             .orderBy("sex","marital_status")
             .coalesce(1)
-            .show(50)
+            
+            output1.show(50)
             //.write.csv("/user/maria_dev/output1.csv");
-          
+            storeCSV(output1, "/user/maria_dev/output1.csv")
+
           val part = Window.partitionBy("sex","marital_status").orderBy(col("count").desc)
-          parqDF1
+          val output2 = parqDF1
             .filter("detail_age > 18")
             .groupBy("sex", "marital_status","358_cause_recode")
             .count()
@@ -103,14 +104,16 @@ object Main extends App {
             .filter("CauseRank < 6")
             .orderBy("sex","marital_status")
             .coalesce(1)
-            .show(50)
+            
+            output2.show(50)
             //.write.csv("/user/maria_dev/output3.csv")
+            storeCSV(output2, "/user/maria_dev/output2.csv")
 
         }
         else if(option == 2) {
           // Education Query
           println("\nDoing Education Query...")
-          parqDF1
+          val output3 = parqDF1
             .filter("detail_age > 18")
             .groupBy("sex", "education_2003_revision")
             .agg(
@@ -118,8 +121,10 @@ object Main extends App {
               count("*").alias("Total Number") )
             .orderBy("sex","education_2003_revision")
             .coalesce(1)
-            .show(50)
+            
+            output3.show(50)
             //.write.csv("/user/maria_dev/output2.csv");
+            storeCSV(output3, "/user/maria_dev/output2.csv")
         }
         else if(option == 3) {
             
@@ -180,13 +185,75 @@ object Main extends App {
           storeCSV(parkSQL2, "/user/maria_dev/babyoutouttrue.csv")
         }
         else if(option == 7) {
-
+            println("Showing deaths by month...")
+            val jan = parqDF1.filter(parqDF1("month_of_death") === 1).count()
+            val feb = parqDF1.filter(parqDF1("month_of_death") === 2).count()
+            val mar = parqDF1.filter(parqDF1("month_of_death") === 3).count()
+            val apr = parqDF1.filter(parqDF1("month_of_death") === 4).count()
+            val may = parqDF1.filter(parqDF1("month_of_death") === 5).count()
+            val jun = parqDF1.filter(parqDF1("month_of_death") === 6).count()
+            val jul = parqDF1.filter(parqDF1("month_of_death") === 7).count()
+            val aug = parqDF1.filter(parqDF1("month_of_death") === 8).count()
+            val sep = parqDF1.filter(parqDF1("month_of_death") === 9).count()
+            val oct = parqDF1.filter(parqDF1("month_of_death") === 10).count()
+            val nov = parqDF1.filter(parqDF1("month_of_death") === 11).count()
+            val dec = parqDF1.filter(parqDF1("month_of_death") === 12).count()
+            println(s"Deaths in January: $jan")
+            println(s"Deaths in February: $feb")
+            println(s"Deaths in March: $mar")
+            println(s"Deaths in April: $apr")
+            println(s"Deaths in May: $may")
+            println(s"Deaths in June: $jun")
+            println(s"Deaths in July: $jul")
+            println(s"Deaths in August: $aug")
+            println(s"Deaths in September: $sep")
+            println(s"Deaths in October: $oct")
+            println(s"Deaths in November: $nov")
+            println(s"Deaths in December: $dec\n\n")
         }
         else if(option == 8) {
-
+            println("\nShowing deaths by day of the week...")
+            val sun = parqDF1.filter(parqDF1("day_of_week_of_death") === 1).count()
+            val mon = parqDF1.filter(parqDF1("day_of_week_of_death") === 2).count()
+            val tue = parqDF1.filter(parqDF1("day_of_week_of_death") === 3).count()
+            val wed = parqDF1.filter(parqDF1("day_of_week_of_death") === 4).count()
+            val thu = parqDF1.filter(parqDF1("day_of_week_of_death") === 5).count()
+            val fri = parqDF1.filter(parqDF1("day_of_week_of_death") === 6).count()
+            val sat = parqDF1.filter(parqDF1("day_of_week_of_death") === 7).count()
+            println(s"Deaths on Sundays: $sun")
+            println(s"Deaths on Mondays: $mon")
+            println(s"Deaths on Tuesdays: $tue")
+            println(s"Deaths on Wednesdays: $wed")
+            println(s"Deaths on Thursdays: $thu")
+            println(s"Deaths on Fridays: $fri")
+            println(s"Deaths on Saturdays: $sat\n\n")
         }
         else if(option == 9) {
-
+            println("\nShowing deaths while engaged in sports activities by month...")
+            val jan = parqDF1.filter(parqDF1("month_of_death") === 1 && parqDF1("activity_code") === 0).count()
+            val feb = parqDF1.filter(parqDF1("month_of_death") === 2 && parqDF1("activity_code") === 0).count()
+            val mar = parqDF1.filter(parqDF1("month_of_death") === 3 && parqDF1("activity_code") === 0).count()
+            val apr = parqDF1.filter(parqDF1("month_of_death") === 4 && parqDF1("activity_code") === 0).count()
+            val may = parqDF1.filter(parqDF1("month_of_death") === 5 && parqDF1("activity_code") === 0).count()
+            val jun = parqDF1.filter(parqDF1("month_of_death") === 6 && parqDF1("activity_code") === 0).count()
+            val jul = parqDF1.filter(parqDF1("month_of_death") === 7 && parqDF1("activity_code") === 0).count()
+            val aug = parqDF1.filter(parqDF1("month_of_death") === 8 && parqDF1("activity_code") === 0).count()
+            val sep = parqDF1.filter(parqDF1("month_of_death") === 9 && parqDF1("activity_code") === 0).count()
+            val oct = parqDF1.filter(parqDF1("month_of_death") === 10 && parqDF1("activity_code") === 0).count()
+            val nov = parqDF1.filter(parqDF1("month_of_death") === 11 && parqDF1("activity_code") === 0).count()
+            val dec = parqDF1.filter(parqDF1("month_of_death") === 12 && parqDF1("activity_code") === 0).count()
+            println(s"Deaths while engaged in sports activities in January: $jan")
+            println(s"Deaths while engaged in sports activities in February: $feb")
+            println(s"Deaths while engaged in sports activities in March: $mar")
+            println(s"Deaths while engaged in sports activities in April: $apr")
+            println(s"Deaths while engaged in sports activities in May: $may")
+            println(s"Deaths while engaged in sports activities in June: $jun")
+            println(s"Deaths while engaged in sports activities in July: $jul")
+            println(s"Deaths while engaged in sports activities in August: $aug")
+            println(s"Deaths while engaged in sports activities in September: $sep")
+            println(s"Deaths while engaged in sports activities in October: $oct")
+            println(s"Deaths while engaged in sports activities in November: $nov")
+            println(s"Deaths while engaged in sports activities in December: $dec\n\n")
         }
         else if(option == 10) {
 
@@ -249,6 +316,12 @@ object Main extends App {
 
         }
         else if(option == 13) {
+          Autopsy_Query(parqDF1)
+        }
+        else if(option == 14) {
+          MainDeathsInactive(parqDF1)
+        }
+        else if(option == 15) {
           println("Exiting...")
           quit = true;
         }
@@ -262,6 +335,81 @@ object Main extends App {
     }
 
   } while(!quit)   
+
+  def Autopsy_Query(dataframe: DataFrame): Unit = {
+        println("This query shows what percentage of deaths resulted in autopsies, versus no autopsies, from 2005-2015.")
+        dataframe.createOrReplaceTempView("FindYears")
+        var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindYears ORDER BY current_data_year")
+        var YearList = YearSQL.collect().toList 
+        dataframe.createOrReplaceTempView("AutopsyView")
+        println("What type of analysis to return? (Provide 'Total' or 'Annual')")
+        var UserInput = scala.io.StdIn.readLine()
+        if(UserInput=="Total"){
+            var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView")
+            var CountDF = AutopsySQL.groupBy("autopsy").count().as("count")
+            var TotalCountDF = CountDF.select(sum("count").as("total_cases"))
+            var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col("count")/col("total_cases"))
+            println(s"The autopsy statistics for 2005-2015 are presented in the following table:")
+            RelativeDF.show(false)
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/Autopsies_2005_through_2015.csv")
+        }else if (UserInput=="Annual") {
+            var CSVDataYearList = ListBuffer[String]()
+            for(year <- YearList){
+                var year_input = year(0)
+                var AutopsySQL = spark.sql(s"SELECT autopsy, current_data_year FROM AutopsyView WHERE current_data_year=$year_input")
+                var CountDF = AutopsySQL.groupBy("autopsy").count().as("count").withColumnRenamed("count",s"Cases ($year_input)")
+                var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total"))
+                var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total")*100)
+                println(s"The autopsy statistics for $year_input are presented in the following table:")
+                RelativeDF.drop(RelativeDF("Total"))
+                RelativeDF.show(false)
+                RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/Autopsies/Yearly/datacsv__$year_input.csv")
+            }
+        }
+    }
+
+    def MainDeathsInactive(dataframe: DataFrame): Unit = {
+      val MappingDataFrame = spark.read.option("header",true).csv("./All_Schemas.csv")
+        println("This is the query for generating the top five most common ways by which people die while eating, sitting, or resting.")
+        dataframe.createOrReplaceTempView("FindInactiveDeaths")
+        var YearSQL = spark.sql("SELECT DISTINCT current_data_year FROM FindInactiveDeaths ORDER BY current_data_year")
+        var YearList = YearSQL.collect().toList 
+        dataframe.createOrReplaceTempView("InactiveDeaths")
+        var CSVDataYearList = ListBuffer[String]()
+        MappingDataFrame.createOrReplaceTempView("MappingCodesView")
+        for(year <- YearList){
+            var year_input = year(0)
+            var InactiveSQL = spark.sql(s"SELECT 358_cause_recode, current_data_year FROM InactiveDeaths WHERE ((activity_code=4) AND (current_data_year=$year_input))")
+            var CountDF = InactiveSQL.groupBy("358_cause_recode").count().as("count").sort(col("count").desc).withColumnRenamed("count",s"Cases ($year_input)")
+            var TotalCountDF = CountDF.select(sum(s"Cases ($year_input)").as("Total_Cases"))
+            var RelativeDF = CountDF.crossJoin(TotalCountDF).withColumn("Relative Perc.", col(s"Cases ($year_input)")/col("Total_Cases")*100)
+            RelativeDF.createOrReplaceTempView("CodeTranslationView")
+            RelativeDF.limit(5).show(false)
+            var yearString = s"_ - current_data_year - $year_input"
+            var CodeSQL = spark.sql("SELECT 358_cause_recode FROM CodeTranslationView")
+            var CodeList = CodeSQL.collect().toList
+            var CodeReplacement = ListBuffer[String]()
+            var count = 1
+            for(code <- CodeList){
+                if(count < 6) {
+                    var code_input = code(0).toString()
+                    var String2Search : String = s"_ - 358_cause_recode - $code_input"
+                    var CodeColumnDF = MappingDataFrame.select(s"$String2Search").first()(0)
+                    var CodeColumnString = CodeColumnDF.toString()
+                    CodeReplacement += CodeColumnString
+                    count += 1
+                }
+            }
+            var CodeStringList = CodeReplacement.toList
+            var CodeDF = CodeStringList.toDS().toDF()
+            //empDF.join(deptDF,empDF.emp_dept_id ==  deptDF.dept_id,"full").show(truncate=False)
+            CodeDF.show(false)
+            //var PresentDF = RelativeDF.withColumn("Cause", CodeDF("value"))
+            //PresentDF.show(false)
+            RelativeDF.coalesce(1).write.option("header", "true").mode("overwrite").csv(s"mortData/InactiveDeaths/Yearly/vital_datacsv__$year_input.csv")
+            }
+        }
+    
 }
 
 class CSVDataset(var filename: String) {
